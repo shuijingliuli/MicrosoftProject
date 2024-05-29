@@ -1,1 +1,1 @@
-# MicrosoftProject
+This project is for learning and communication purposes only. Please delete it within 24 hours after downloading. By downloading, you agree that the downloader is responsible for any consequences resulting from this action.
