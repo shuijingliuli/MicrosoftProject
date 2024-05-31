@@ -68,10 +68,11 @@
         .search-history-item p {
             margin: 0;
         }
-        .search-history-item .source {
-            margin-top: 5px;
-            font-size: 14px;
-            color: #666;
+        .search-history-item iframe {
+            width: 100%;
+            height: 300px;
+            border: none;
+            margin-top: 10px;
         }
     </style>
 </head>
@@ -108,38 +109,33 @@
         let countdownIntervalId;
         let countdownTimeoutId;
         let nextSearchWord = '';
+        let searchToggle = true; // 用于切换URL
+        let apiIndex = 0; // 用于循环使用API
+
+        const apis = [
+            'https://v1.hitokoto.cn/',
+            'https://api.xygeng.cn/one',
+            'https://api.xygeng.cn/openapi/one',
+            // 在这里添加更多的API URL
+            'https://api.example.com/another',
+            'https://api.anotherexample.com/yetanother'
+        ];
 
         async function fetchSearchWords() {
+            const apiUrl = apis[apiIndex];
+            apiIndex = (apiIndex + 1) % apis.length; // 循环切换API
             try {
-                let response = await fetch('https://v1.hitokoto.cn/');
+                let response = await fetch(apiUrl);
                 let data = await response.json();
                 if (data.hitokoto) {
                     return data.hitokoto;
+                } else if (data.data && data.data.content) {
+                    return data.data.content;
                 } else {
-                    throw new Error('No data from first source');
+                    throw new Error('No valid data from API');
                 }
             } catch {
-                try {
-                    let response = await fetch('https://api.xygeng.cn/one');
-                    let data = await response.json();
-                    if (data.data && data.data.content) {
-                        return data.data.content;
-                    } else {
-                        throw new Error('No data from second source');
-                    }
-                } catch {
-                    try {
-                        let response = await fetch('https://api.xygeng.cn/openapi/one');
-                        let data = await response.json();
-                        if (data.data && data.data.content) {
-                            return data.data.content;
-                        } else {
-                            return defaultSearchWords[Math.floor(Math.random() * defaultSearchWords.length)];
-                        }
-                    } catch {
-                        return defaultSearchWords[Math.floor(Math.random() * defaultSearchWords.length)];
-                    }
-                }
+                return defaultSearchWords[Math.floor(Math.random() * defaultSearchWords.length)];
             }
         }
 
@@ -147,36 +143,40 @@
             document.getElementById('current-search-word').textContent = word;
         }
 
-        function addSearchHistory(word) {
+        function addSearchHistory(word, iframeUrl) {
             const searchHistoryElement = document.getElementById('search-history');
             const newHistoryItem = document.createElement('div');
             newHistoryItem.className = 'search-history-item';
-            newHistoryItem.innerHTML = `<p>${word}</p>`;
+            newHistoryItem.innerHTML = `<p>${word}</p><iframe src="${iframeUrl}"></iframe>`;
             searchHistoryElement.insertBefore(newHistoryItem, searchHistoryElement.firstChild.nextSibling);
         }
 
         function performSearch(word) {
-	        const randomSK = generateRandomString(8);
-	        const randomSCP = generateRandomNUM(1);
-	        const randomSCF = generateRandomNUM(1);
             const randomString = generateRandomString(4);
             const randomCvid = generateRandomString(32);
-            const searchUrl = `https://www.cn.bing.com//search?q=${encodeURIComponent(word)}&sk=${randomSK}&sc=${randomSCP}-${randomSCF}&cvid=${randomCvid}&FROM=${randomString}&sp=2&lq=0`;
-            window.open(searchUrl, '_blank');
-            addSearchHistory(word);
+            let searchUrl;
+
+            if (searchToggle) {
+                searchUrl = `https://www.cn.bing.com/search?q=${encodeURIComponent(word)}&form=${randomString}&cvid=${randomCvid}`;
+            } else {
+                searchUrl = `https://www.cn.bing.com/search?q=${encodeURIComponent(word)}&cvid=${randomCvid}&FORM=${randomString}`;
+            }
+
+            searchToggle = !searchToggle; // 切换URL
+            addSearchHistory(word, searchUrl);
+
+            // 关闭 iframe 并仅保留搜索词
+            setTimeout(() => {
+                const iframes = document.querySelectorAll('.search-history-item iframe');
+                if (iframes.length > 0) {
+                    const iframe = iframes[iframes.length - 1];
+                    iframe.parentNode.removeChild(iframe);
+                }
+            }, 9000); // 搜索后9秒关闭iframe
         }
 
         function generateRandomString(length) {
             const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-            let result = '';
-            for (let i = 0; i < length; i++) {
-                result += characters.charAt(Math.floor(Math.random() * characters.length));
-            }
-            return result;
-        }
-		
-        function generateRandomNUM(length) {
-            const characters = '0123456789';
             let result = '';
             for (let i = 0; i < length; i++) {
                 result += characters.charAt(Math.floor(Math.random() * characters.length));
